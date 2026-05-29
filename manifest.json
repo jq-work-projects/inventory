@@ -1,0 +1,11 @@
+{
+  "name": "Inventory",
+  "short_name": "Inventory",
+  "description": "Personal inventory and sales tracker",
+  "start_url": "./inventory.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f2f2f7",
+  "theme_color": "#0a84ff"
+}

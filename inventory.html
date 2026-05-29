@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Inventory">
 <meta name="theme-color" content="#0a84ff">
 <title>Inventory</title>
+<link rel="manifest" href="./manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1496,6 +1497,12 @@
   // ---------- Init ----------
   renderInventory();
 })();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
