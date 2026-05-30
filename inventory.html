@@ -135,6 +135,12 @@
   .item-info { flex: 1; min-width: 0; }
   .item-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .item-stock {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 4px;
+  }
   .badge {
     display: inline-block; padding: 2px 8px; border-radius: 6px;
     font-size: 11px; font-weight: 700; text-transform: uppercase;
@@ -276,15 +282,22 @@
     letter-spacing: 0.5px; margin: 12px 0 6px;
   }
   .item-tags { margin-top: 6px; }
+  .item .tag-chip {
+    font-size: 11px;
+    padding: 2px 8px;
+    margin: 0 3px 3px 0;
+  }
   #item-tag-picker { margin-bottom: 4px; }
-  .inv-toolbar .filter-btn {
+  .inv-toolbar .filter-btn,
+  .inv-toolbar .sort-btn {
     padding: 10px; margin: 0;
     background: var(--bg); color: var(--text);
     border: 1px solid var(--border); border-radius: 10px;
     position: relative; cursor: pointer; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
   }
-  .inv-toolbar .filter-btn.active {
+  .inv-toolbar .filter-btn.active,
+  .inv-toolbar .sort-btn.active {
     color: var(--accent); border-color: var(--accent);
   }
   .inv-toolbar .filter-btn .dot {
@@ -296,21 +309,43 @@
     box-sizing: content-box;
   }
   .inv-toolbar .filter-btn.has-filters .dot { display: block; }
-  .inv-toolbar .filter-btn svg { display: block; }
-  .filter-panel {
+  .inv-toolbar .filter-btn svg,
+  .inv-toolbar .sort-btn svg { display: block; }
+  .filter-chips-strip {
     display: none;
+    flex-wrap: wrap;
     padding-top: 12px;
     margin-top: 8px;
     margin-bottom: 4px;
     border-top: 1px solid var(--border);
   }
-  .filter-panel.open { display: block; }
-  .filter-panel-head {
-    display: flex; justify-content: space-between; align-items: center;
+  .filter-chips-strip.active { display: flex; }
+  .sort-status {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 6px;
     margin-bottom: 6px;
   }
-  .filter-panel-head h3 {
-    margin: 0; font-size: 13px; font-weight: 600; color: var(--text);
+  .sort-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 0;
+    font-family: inherit;
+  }
+  .sort-option:active { background: var(--bg); }
+  .sort-option.active {
+    background: var(--bg);
+    color: var(--accent);
+    font-weight: 600;
   }
   .kebab-btn {
     width: 32px; height: 32px;
@@ -448,6 +483,8 @@
       max-height: calc(100vh - var(--safe-top) - 140px);
       overflow-y: auto;
     }
+    .modal-overlay { align-items: center; }
+    .modal { border-radius: 16px; }
   }
 </style>
 </head>
@@ -483,10 +520,20 @@
           </svg>
           <span class="dot"></span>
         </button>
+        <button type="button" class="sort-btn" id="open-sort" aria-label="Sort">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M6 12h12"/>
+              <path d="M9 18h6"/>
+            </g>
+          </svg>
+        </button>
         <button type="button" class="secondary" id="open-manage-tags">Tags</button>
         <button type="button" class="primary" id="open-add-item">+ Add item</button>
       </div>
-      <div id="filter-panel" class="filter-panel"></div>
+      <div id="filter-chips-strip" class="filter-chips-strip"></div>
+      <div id="sort-status" class="sort-status"></div>
       <div id="inv-list"></div>
     </div>
   </section>
@@ -511,8 +558,18 @@
           </svg>
           <span class="dot"></span>
         </button>
+        <button type="button" class="sort-btn" id="open-sale-sort" aria-label="Sort">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M6 12h12"/>
+              <path d="M9 18h6"/>
+            </g>
+          </svg>
+        </button>
       </div>
-      <div id="sale-filter-panel" class="filter-panel"></div>
+      <div id="sale-filter-chips-strip" class="filter-chips-strip"></div>
+      <div id="sale-sort-status" class="sort-status"></div>
       <div id="sale-picker"></div>
     </div>
     <div class="card" id="sale-cart-card">
@@ -603,6 +660,26 @@
     </form>
     <hr>
     <div id="tags-list-area"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="filter-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Filter by tag</h2>
+      <button type="button" class="icon-btn" id="close-filter-modal" aria-label="Close">✕</button>
+    </div>
+    <div id="filter-modal-body"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sort-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Sort by</h2>
+      <button type="button" class="icon-btn" id="close-sort-modal" aria-label="Close">✕</button>
+    </div>
+    <div id="sort-modal-body"></div>
   </div>
 </div>
 
@@ -867,6 +944,8 @@
   function renderInventory() {
     const q = document.getElementById('inv-search').value.trim();
     const list = document.getElementById('inv-list');
+    const stockSortOptHdr = SORT_OPTIONS.find(o => o.key === stockSort);
+    document.getElementById('sort-status').textContent = stockSortOptHdr ? 'Sorted by: ' + stockSortOptHdr.label : '';
     const filtered = state.items.filter(i => matchesQuery(i, q) && matchesFilter(i, activeFilterIds));
     if (!filtered.length) {
       const hasNarrowing = q || activeFilterIds.size;
@@ -877,15 +956,16 @@
         '</div>';
       return;
     }
-    filtered.sort((a, b) => a.name.localeCompare(b.name));
-    list.innerHTML = filtered.map(item => `
+    const sortedItems = sortItems(filtered, stockSort);
+    list.innerHTML = sortedItems.map(item => `
       <div class="item">
         <div class="item-img">${item.image ? `<img src="${item.image}">` : 'No img'}</div>
         <div class="item-info">
           <div class="item-name">${escapeHtml(item.name)}</div>
           <div class="item-meta">
-            ${item.code ? escapeHtml(item.code) + ' · ' : ''}$${fmt(item.price)} · Stock: ${item.stock}
+            ${item.code ? escapeHtml(item.code) + ' · ' : ''}$${fmt(item.price)}
           </div>
+          <div class="item-stock">Stock: ${item.stock}</div>
           ${renderItemTags(item)}
         </div>
         <div class="item-actions">
@@ -953,6 +1033,8 @@
   function renderSalePicker() {
     const q = document.getElementById('sale-search').value.trim();
     const picker = document.getElementById('sale-picker');
+    const saleSortOptHdr = SORT_OPTIONS.find(o => o.key === saleSort);
+    document.getElementById('sale-sort-status').textContent = saleSortOptHdr ? 'Sorted by: ' + saleSortOptHdr.label : '';
     const available = state.items.filter(i => matchesQuery(i, q) && matchesFilter(i, saleFilterIds));
     if (!state.items.length) {
       picker.innerHTML = '<div class="empty">Add items in the Stock tab first.</div>';
@@ -967,8 +1049,8 @@
       renderCart();
       return;
     }
-    available.sort((a, b) => a.name.localeCompare(b.name));
-    picker.innerHTML = available.map(item => {
+    const sortedAvailable = sortItems(available, saleSort);
+    picker.innerHTML = sortedAvailable.map(item => {
       const inCart = state.cart[item.id] || 0;
       const remaining = item.stock - inCart;
       const isOut = item.stock <= 0;
@@ -1230,29 +1312,26 @@
   const pendingTagIds = new Set();
   const activeFilterIds = new Set();
   const saleFilterIds = new Set();
-  let filterPanelOpen = false;
-  let saleFilterPanelOpen = false;
+  let currentFilterContext = null;
   let selectedTagColor = TAG_COLORS[0];
 
-  function renderFilterPanelInto(panelEl, btnEl, filterSet, isOpen, onChange) {
-    btnEl.classList.toggle('has-filters', filterSet.size > 0);
-    btnEl.classList.toggle('active', isOpen);
-    panelEl.classList.toggle('open', isOpen);
-    if (!isOpen) return;
+  function renderFilterModalBody() {
+    if (!currentFilterContext) return;
+    const { filterSet, refresh } = currentFilterContext;
+    const bodyEl = document.getElementById('filter-modal-body');
 
     if (!state.tags.length) {
-      panelEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:4px 0;">No tags yet. Create some via the Tags button to filter.</div>';
+      bodyEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:4px 0;">No tags yet. Create some via the Tags button to filter.</div>';
       return;
     }
 
     const groups = { series: [], itemType: [] };
     state.tags.forEach(t => { if (groups[t.type]) groups[t.type].push(t); });
 
-    let html = '<div class="filter-panel-head"><h3>Filter by tag</h3>';
+    let html = '';
     if (filterSet.size) {
-      html += '<button type="button" class="small-link" data-clear-filters>Clear (' + filterSet.size + ')</button>';
+      html += '<div style="margin-bottom:10px;"><button type="button" class="small-link" data-clear-filters>Clear all (' + filterSet.size + ')</button></div>';
     }
-    html += '</div>';
 
     ['series', 'itemType'].forEach(type => {
       if (!groups[type].length) return;
@@ -1262,59 +1341,211 @@
         const style = selected
           ? `background:${t.color};color:white;`
           : `color:${t.color};border-color:${t.color};`;
-        html += `<button type="button" class="tag-chip ${selected ? '' : 'outline'}" data-filter-tag="${t.id}" style="${style}">${escapeHtml(t.name)}</button>`;
+        html += `<button type="button" class="tag-chip ${selected ? '' : 'outline'}" data-toggle-filter="${t.id}" style="${style}">${escapeHtml(t.name)}</button>`;
       });
       html += '</div>';
     });
 
-    panelEl.innerHTML = html;
+    bodyEl.innerHTML = html;
 
-    panelEl.querySelectorAll('[data-filter-tag]').forEach(chip => {
+    bodyEl.querySelectorAll('[data-toggle-filter]').forEach(chip => {
       chip.addEventListener('click', () => {
-        const id = chip.dataset.filterTag;
+        const id = chip.dataset.toggleFilter;
         if (filterSet.has(id)) filterSet.delete(id);
         else filterSet.add(id);
-        onChange();
+        refresh();
+        renderFilterModalBody();
       });
     });
 
-    const clear = panelEl.querySelector('[data-clear-filters]');
+    const clear = bodyEl.querySelector('[data-clear-filters]');
     if (clear) {
       clear.addEventListener('click', () => {
         filterSet.clear();
-        onChange();
+        refresh();
+        renderFilterModalBody();
       });
     }
   }
 
-  function renderFilterPanel() {
-    renderFilterPanelInto(
-      document.getElementById('filter-panel'),
+  function openFilterModal(filterSet, refresh) {
+    currentFilterContext = { filterSet, refresh };
+    document.getElementById('filter-modal').classList.add('active');
+    document.body.classList.add('modal-open');
+    renderFilterModalBody();
+  }
+
+  function closeFilterModal() {
+    document.getElementById('filter-modal').classList.remove('active');
+    currentFilterContext = null;
+    const itemModalOpen = document.getElementById('item-modal').classList.contains('active');
+    const tagsModalOpen = document.getElementById('tags-modal').classList.contains('active');
+    if (!itemModalOpen && !tagsModalOpen) {
+      document.body.classList.remove('modal-open');
+    }
+  }
+
+  function renderFilterChips(stripEl, btnEl, filterSet, onRemove) {
+    btnEl.classList.toggle('has-filters', filterSet.size > 0);
+    if (!filterSet.size) {
+      stripEl.classList.remove('active');
+      stripEl.innerHTML = '';
+      return;
+    }
+    stripEl.classList.add('active');
+    let html = '';
+    filterSet.forEach(tid => {
+      const tag = state.tags.find(t => t.id === tid);
+      if (!tag) return;
+      html += `<button type="button" class="tag-chip" style="background:${tag.color};color:white;" data-remove-filter="${tid}">${escapeHtml(tag.name)}<span class="x">×</span></button>`;
+    });
+    stripEl.innerHTML = html;
+    stripEl.querySelectorAll('[data-remove-filter]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        filterSet.delete(chip.dataset.removeFilter);
+        onRemove();
+      });
+    });
+  }
+
+  function renderFilterChipsStock() {
+    renderFilterChips(
+      document.getElementById('filter-chips-strip'),
       document.getElementById('open-filter'),
       activeFilterIds,
-      filterPanelOpen,
-      () => { renderFilterPanel(); renderInventory(); }
+      refreshStockFilter
     );
   }
 
-  function renderSaleFilterPanel() {
-    renderFilterPanelInto(
-      document.getElementById('sale-filter-panel'),
+  function renderFilterChipsSale() {
+    renderFilterChips(
+      document.getElementById('sale-filter-chips-strip'),
       document.getElementById('open-sale-filter'),
       saleFilterIds,
-      saleFilterPanelOpen,
-      () => { renderSaleFilterPanel(); renderSalePicker(); }
+      refreshSaleFilter
     );
+  }
+
+  function refreshStockFilter() {
+    renderFilterChipsStock();
+    renderInventory();
+  }
+
+  function refreshSaleFilter() {
+    renderFilterChipsSale();
+    renderSalePicker();
   }
 
   document.getElementById('open-filter').addEventListener('click', () => {
-    filterPanelOpen = !filterPanelOpen;
-    renderFilterPanel();
+    openFilterModal(activeFilterIds, refreshStockFilter);
   });
 
   document.getElementById('open-sale-filter').addEventListener('click', () => {
-    saleFilterPanelOpen = !saleFilterPanelOpen;
-    renderSaleFilterPanel();
+    openFilterModal(saleFilterIds, refreshSaleFilter);
+  });
+
+  document.getElementById('close-filter-modal').addEventListener('click', closeFilterModal);
+  document.getElementById('filter-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'filter-modal') closeFilterModal();
+  });
+
+  // ---------- Sort ----------
+  const SORT_OPTIONS = [
+    { key: 'name-asc',     label: 'Name (A-Z)' },
+    { key: 'name-desc',    label: 'Name (Z-A)' },
+    { key: 'stock-asc',    label: 'Stock (Low to High)' },
+    { key: 'stock-desc',   label: 'Stock (High to Low)' },
+    { key: 'price-asc',    label: 'Price (Low to High)' },
+    { key: 'price-desc',   label: 'Price (High to Low)' },
+    { key: 'status-desc',  label: 'Status (Out of stock first)' },
+    { key: 'status-asc',   label: 'Status (Available first)' },
+    { key: 'updated-desc', label: 'Last updated (Newest first)' },
+    { key: 'updated-asc',  label: 'Last updated (Oldest first)' },
+  ];
+  let stockSort = 'updated-desc';
+  let saleSort = 'updated-desc';
+  let currentSortContext = null;
+
+  function statusRank(item) {
+    if (item.stock <= 0) return 2;
+    if (item.stock <= (item.lowAt || 0)) return 1;
+    return 0;
+  }
+
+  function sortItems(items, sortKey) {
+    const [field, dir] = sortKey.split('-');
+    const sign = dir === 'asc' ? 1 : -1;
+    const sorted = items.slice();
+    sorted.sort((a, b) => {
+      let primary = 0;
+      if (field === 'name')   primary = a.name.localeCompare(b.name) * sign;
+      else if (field === 'stock')   primary = (a.stock - b.stock) * sign;
+      else if (field === 'price')   primary = (a.price - b.price) * sign;
+      else if (field === 'status')  primary = (statusRank(a) - statusRank(b)) * sign;
+      else if (field === 'updated') primary = ((a.updatedAt || 0) - (b.updatedAt || 0)) * sign;
+      if (primary !== 0) return primary;
+      return a.name.localeCompare(b.name);
+    });
+    return sorted;
+  }
+
+  function renderSortModalBody() {
+    if (!currentSortContext) return;
+    const { getSort, setSort, refresh } = currentSortContext;
+    const bodyEl = document.getElementById('sort-modal-body');
+    const currentSort = getSort();
+    let html = '';
+    SORT_OPTIONS.forEach(opt => {
+      const isActive = opt.key === currentSort;
+      html += `<button type="button" class="sort-option ${isActive ? 'active' : ''}" data-sort="${opt.key}">${opt.label}</button>`;
+    });
+    bodyEl.innerHTML = html;
+    bodyEl.querySelectorAll('[data-sort]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setSort(btn.dataset.sort);
+        refresh();
+        renderSortModalBody();
+      });
+    });
+  }
+
+  function openSortModal(getSort, setSort, refresh) {
+    currentSortContext = { getSort, setSort, refresh };
+    document.getElementById('sort-modal').classList.add('active');
+    document.body.classList.add('modal-open');
+    renderSortModalBody();
+  }
+
+  function closeSortModal() {
+    document.getElementById('sort-modal').classList.remove('active');
+    currentSortContext = null;
+    const itemModalOpen = document.getElementById('item-modal').classList.contains('active');
+    const tagsModalOpen = document.getElementById('tags-modal').classList.contains('active');
+    const filterModalOpen = document.getElementById('filter-modal').classList.contains('active');
+    if (!itemModalOpen && !tagsModalOpen && !filterModalOpen) {
+      document.body.classList.remove('modal-open');
+    }
+  }
+
+  document.getElementById('open-sort').addEventListener('click', () => {
+    openSortModal(
+      () => stockSort,
+      (newSort) => { stockSort = newSort; },
+      () => renderInventory()
+    );
+  });
+
+  document.getElementById('open-sale-sort').addEventListener('click', () => {
+    openSortModal(
+      () => saleSort,
+      (newSort) => { saleSort = newSort; },
+      () => renderSalePicker()
+    );
+  });
+
+  document.getElementById('close-sort-modal').addEventListener('click', closeSortModal);
+  document.getElementById('sort-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'sort-modal') closeSortModal();
   });
 
   // ---------- Inline row menu ----------
@@ -1400,8 +1631,9 @@
         save();
         renderTagsList();
         renderTagPicker();
-        renderFilterPanel();
-        renderSaleFilterPanel();
+        renderFilterChipsStock();
+        renderFilterChipsSale();
+        if (currentFilterContext) renderFilterModalBody();
         renderInventory();
         renderSalePicker();
       });
@@ -1463,8 +1695,9 @@
       document.body.classList.remove('modal-open');
     }
     renderTagPicker();
-    renderFilterPanel();
-    renderSaleFilterPanel();
+    renderFilterChipsStock();
+    renderFilterChipsSale();
+    if (currentFilterContext) renderFilterModalBody();
     renderInventory();
     renderSalePicker();
   }
@@ -1489,8 +1722,9 @@
     save();
     document.getElementById('t-name').value = '';
     renderTagsList();
-    renderFilterPanel();
-    renderSaleFilterPanel();
+    renderFilterChipsStock();
+    renderFilterChipsSale();
+    if (currentFilterContext) renderFilterModalBody();
     toast('Tag added');
   });
 
