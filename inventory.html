@@ -168,6 +168,12 @@
   .qty input {
     width: 38px; text-align: center; padding: 6px 2px;
     font-size: 15px; font-weight: 600;
+    -moz-appearance: textfield;
+  }
+  .qty input::-webkit-inner-spin-button,
+  .qty input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
   .item-qty-row {
     flex-basis: 100%;
